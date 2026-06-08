@@ -217,24 +217,34 @@ python main.py --input images/test.png --output input_multiphase --model multi-p
 
 <table>
 <tr>
-    <td align="center">
-        <b>Input Image</b><br><br>
-        <img src="docs/test.png" width="350">
+    <th colspan="2">Input Image</th>
+    <th colspan="2">Segmentation Mask</th>
+</tr>
+
+<tr>
+    <td colspan="2" align="center">
+        <img src="docs/test.png" width="350"><br>
+        Original synthetic test image.
     </td>
-    <td align="center">
-        <b>overlay</b><br><br>
-        <img src="docs/overlay.png" width="350">
+    <td colspan="2" align="center">
+        <img src="docs/overlay.png" width="350"><br>
+        Binary segmentation result.
     </td>
 </tr>
 
 <tr>
-    <td align="center">
-        <b>label_mask_color</b><br><br>
-        <img src="docs/label_mask_color.png" width="350">
+    <th colspan="2">Contour Overlay</th>
+    <th colspan="2">Energy Convergence</th>
+</tr>
+
+<tr>
+    <td colspan="2" align="center">
+        <img src="docs/label_mask_color.png" width="350"><br>
+        Final contour after optimization.
     </td>
-    <td align="center">
-        <b>Energy Convergence</b><br><br>
-        <img src="docs/energy.png" width="350">
+    <td colspan="2" align="center">
+        <img src="docs/energy.png" width="350"><br>
+        Energy evolution during optimization.
     </td>
 </tr>
 </table>
