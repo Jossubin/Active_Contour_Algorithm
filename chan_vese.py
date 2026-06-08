@@ -17,8 +17,9 @@ This implementation follows the paper's main idea:
         + lambda1 * ∫inside(C) |u0 - c1|^2 dxdy
         + lambda2 * ∫outside(C) |u0 - c2|^2 dxdy
 
-The update here uses an explicit finite-difference gradient descent scheme.
-It is intentionally written to be readable for coursework submission.
+The default update uses a semi-implicit finite-difference approximation of
+the Euler-Lagrange PDE, following the numerical scheme described in Section
+III of Chan and Vese (2001). An explicit update is kept for comparison.
 """
 
 from __future__ import annotations
@@ -41,6 +42,8 @@ class ChanVeseParams:
     timestep: float = 0.1     # gradient descent time step
     max_iter: int = 500       # maximum number of iterations
     tol: float = 1e-4         # stopping threshold
+    solver: str = "semi-implicit"  # "semi-implicit" follows the paper's finite-difference scheme
+    inner_iter: int = 5       # fixed-point iterations for the semi-implicit linearized update
     reinit_every: int = 0     # 0 disables reinitialization
     reinit_iters: int = 5     # iterations used when reinitializing
 
@@ -55,6 +58,8 @@ class ChanVeseResult:
     c2: float
     energies: List[float]
     iterations: int
+    phis: Optional[Tuple[np.ndarray, np.ndarray]] = None
+    c_values: Optional[List[float]] = None
 
 
 def regularized_heaviside(phi: np.ndarray, epsilon: float) -> np.ndarray:
@@ -78,6 +83,7 @@ def initialize_phi(
     shape: Tuple[int, int],
     method: str = "checkerboard",
     radius: Optional[float] = None,
+    image: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """
     Create an initial level-set function.
@@ -118,7 +124,12 @@ def initialize_phi(
         phi = radius - np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
         return phi.astype(np.float64)
 
-    raise ValueError("method must be either 'checkerboard' or 'circle'")
+    if method == "intensity":
+        if image is None:
+            raise ValueError("intensity initialization requires an image.")
+        return (image - np.median(image)).astype(np.float64)
+
+    raise ValueError("method must be 'checkerboard', 'circle', or 'intensity'")
 
 
 def compute_region_averages(
@@ -163,6 +174,108 @@ def curvature(phi: np.ndarray) -> np.ndarray:
     return nxx + nyy
 
 
+def apply_neumann_boundary(phi: np.ndarray) -> None:
+    """
+    Apply the zero normal derivative boundary condition from the paper.
+    """
+    phi[0, :] = phi[1, :]
+    phi[-1, :] = phi[-2, :]
+    phi[:, 0] = phi[:, 1]
+    phi[:, -1] = phi[:, -2]
+
+
+def explicit_update(
+    image: np.ndarray,
+    phi: np.ndarray,
+    params: ChanVeseParams,
+    c1: float,
+    c2: float,
+) -> np.ndarray:
+    """
+    Readable explicit gradient-descent update for comparison.
+    """
+    delta = regularized_delta(phi, params.epsilon)
+    kappa = curvature(phi)
+
+    force = (
+        params.mu * kappa
+        - params.nu
+        - params.lambda1 * (image - c1) ** 2
+        + params.lambda2 * (image - c2) ** 2
+    )
+
+    next_phi = phi + params.timestep * delta * force
+    apply_neumann_boundary(next_phi)
+    return next_phi
+
+
+def semi_implicit_update(
+    image: np.ndarray,
+    phi: np.ndarray,
+    params: ChanVeseParams,
+    c1: float,
+    c2: float,
+) -> np.ndarray:
+    """
+    Semi-implicit finite-difference update for equation (9) in the paper.
+
+    The nonlinear curvature term
+        div(grad(phi) / |grad(phi)|)
+    is discretized with coefficients computed from phi^n, while the neighbor
+    values of phi are iterated toward phi^(n+1). This is the practical form of
+    the paper's linearized implicit curvature update.
+    """
+    old_phi = phi.copy()
+    next_phi = phi.copy()
+    delta = regularized_delta(old_phi, params.epsilon)
+    tiny = 1e-8
+
+    center = old_phi[1:-1, 1:-1]
+    east = old_phi[1:-1, 2:]
+    west = old_phi[1:-1, :-2]
+    south = old_phi[2:, 1:-1]
+    north = old_phi[:-2, 1:-1]
+
+    c_e = 1.0 / np.sqrt((east - center) ** 2 + ((south - north) * 0.5) ** 2 + tiny)
+    c_w = 1.0 / np.sqrt(
+        (center - west) ** 2
+        + ((old_phi[2:, :-2] - old_phi[:-2, :-2]) * 0.5) ** 2
+        + tiny
+    )
+    c_s = 1.0 / np.sqrt(((east - west) * 0.5) ** 2 + (south - center) ** 2 + tiny)
+    c_n = 1.0 / np.sqrt(
+        ((old_phi[:-2, 2:] - old_phi[:-2, :-2]) * 0.5) ** 2
+        + (center - north) ** 2
+        + tiny
+    )
+
+    delta_i = delta[1:-1, 1:-1]
+    data_force = (
+        -params.nu
+        - params.lambda1 * (image[1:-1, 1:-1] - c1) ** 2
+        + params.lambda2 * (image[1:-1, 1:-1] - c2) ** 2
+    )
+
+    curvature_weight = params.timestep * delta_i * params.mu
+    rhs = center + params.timestep * delta_i * data_force
+    denominator = 1.0 + curvature_weight * (c_e + c_w + c_s + c_n)
+
+    for _ in range(max(1, params.inner_iter)):
+        next_phi[1:-1, 1:-1] = (
+            rhs
+            + curvature_weight
+            * (
+                c_e * next_phi[1:-1, 2:]
+                + c_w * next_phi[1:-1, :-2]
+                + c_s * next_phi[2:, 1:-1]
+                + c_n * next_phi[:-2, 1:-1]
+            )
+        ) / denominator
+        apply_neumann_boundary(next_phi)
+
+    return next_phi
+
+
 def compute_energy(
     image: np.ndarray,
     phi: np.ndarray,
@@ -185,6 +298,150 @@ def compute_energy(
     outside_term = params.lambda2 * np.sum(((image - c2) ** 2) * (1.0 - h))
 
     return float(length_term + area_term + inside_term + outside_term)
+
+
+def initialize_multiphase_phi(
+    image: np.ndarray,
+    method: str = "checkerboard",
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Initialize two level-set functions for a four-region multiphase model.
+    """
+    shape = image.shape
+    height, width = shape
+    y, x = np.indices((height, width))
+
+    if method == "checkerboard":
+        block = max(8, min(height, width) // 8)
+        phi1 = np.sin(np.pi * x / block) * np.sin(np.pi * y / block)
+        phi2 = np.sin(np.pi * (x + block * 0.5) / block) * np.sin(
+            np.pi * (y + block * 0.25) / block
+        )
+        return phi1.astype(np.float64), phi2.astype(np.float64)
+
+    if method == "circle":
+        cy = (height - 1) / 2.0
+        cx = (width - 1) / 2.0
+        radius1 = min(height, width) * 0.42
+        radius2 = min(height, width) * 0.24
+        phi1 = radius1 - np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+        phi2 = radius2 - np.sqrt((x - cx - width * 0.12) ** 2 + (y - cy) ** 2)
+        return phi1.astype(np.float64), phi2.astype(np.float64)
+
+    if method == "intensity":
+        q25, q50, q75 = np.quantile(image, [0.25, 0.5, 0.75])
+        phi1 = image - q50
+        phi2 = (image - q25) * (image - q75)
+        return phi1.astype(np.float64), phi2.astype(np.float64)
+
+    raise ValueError("method must be 'checkerboard', 'circle', or 'intensity'")
+
+
+def compute_multiphase_memberships(
+    phi1: np.ndarray,
+    phi2: np.ndarray,
+    epsilon: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Return the four soft region memberships defined by two level sets.
+    """
+    h1 = regularized_heaviside(phi1, epsilon)
+    h2 = regularized_heaviside(phi2, epsilon)
+    m11 = h1 * h2
+    m10 = h1 * (1.0 - h2)
+    m01 = (1.0 - h1) * h2
+    m00 = (1.0 - h1) * (1.0 - h2)
+    return m11, m10, m01, m00
+
+
+def compute_multiphase_averages(
+    image: np.ndarray,
+    phi1: np.ndarray,
+    phi2: np.ndarray,
+    epsilon: float,
+) -> List[float]:
+    """
+    Compute one average intensity for each of the four regions.
+    """
+    memberships = compute_multiphase_memberships(phi1, phi2, epsilon)
+    tiny = 1e-12
+    return [
+        float(np.sum(image * membership) / (np.sum(membership) + tiny))
+        for membership in memberships
+    ]
+
+
+def multiphase_labels(phi1: np.ndarray, phi2: np.ndarray) -> np.ndarray:
+    """
+    Convert two level sets into hard labels 0, 1, 2, and 3.
+    """
+    bit1 = phi1 >= 0.0
+    bit2 = phi2 >= 0.0
+    return (bit1.astype(np.uint8) * 2 + bit2.astype(np.uint8))
+
+
+def compute_multiphase_energy(
+    image: np.ndarray,
+    phi1: np.ndarray,
+    phi2: np.ndarray,
+    params: ChanVeseParams,
+    c_values: List[float],
+) -> float:
+    """
+    Compute the four-region Chan-Vese multiphase energy.
+    """
+    memberships = compute_multiphase_memberships(phi1, phi2, params.epsilon)
+    fitting_weight = 0.5 * (params.lambda1 + params.lambda2)
+    fitting_term = sum(
+        fitting_weight * np.sum(((image - c) ** 2) * membership)
+        for c, membership in zip(c_values, memberships)
+    )
+
+    length_term = 0.0
+    for phi in (phi1, phi2):
+        delta = regularized_delta(phi, params.epsilon)
+        phi_y, phi_x = np.gradient(phi)
+        grad_norm = np.sqrt(phi_x * phi_x + phi_y * phi_y + 1e-12)
+        length_term += params.mu * np.sum(delta * grad_norm)
+
+    return float(length_term + fitting_term)
+
+
+def multiphase_explicit_update(
+    image: np.ndarray,
+    phi1: np.ndarray,
+    phi2: np.ndarray,
+    params: ChanVeseParams,
+    c_values: List[float],
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Explicit gradient descent update for the two-level-set, four-region model.
+    """
+    c11, c10, c01, c00 = c_values
+    h1 = regularized_heaviside(phi1, params.epsilon)
+    h2 = regularized_heaviside(phi2, params.epsilon)
+    d1 = regularized_delta(phi1, params.epsilon)
+    d2 = regularized_delta(phi2, params.epsilon)
+    fitting_weight = 0.5 * (params.lambda1 + params.lambda2)
+
+    e11 = fitting_weight * (image - c11) ** 2
+    e10 = fitting_weight * (image - c10) ** 2
+    e01 = fitting_weight * (image - c01) ** 2
+    e00 = fitting_weight * (image - c00) ** 2
+
+    data_force1 = -(h2 * (e11 - e01) + (1.0 - h2) * (e10 - e00))
+    data_force2 = -(h1 * (e11 - e10) + (1.0 - h1) * (e01 - e00))
+
+    next_phi1 = phi1 + params.timestep * d1 * (
+        params.mu * curvature(phi1) + data_force1
+    )
+    next_phi2 = phi2 + params.timestep * d2 * (
+        params.mu * curvature(phi2) + data_force2
+    )
+
+    apply_neumann_boundary(next_phi1)
+    apply_neumann_boundary(next_phi2)
+    return next_phi1, next_phi2
 
 
 def reinitialize_sdf(phi: np.ndarray, iterations: int = 5, dt: float = 0.3) -> np.ndarray:
@@ -249,13 +506,16 @@ def chan_vese(
     if params is None:
         params = ChanVeseParams()
 
+    if params.solver not in {"semi-implicit", "explicit"}:
+        raise ValueError("solver must be either 'semi-implicit' or 'explicit'.")
+
     if image.ndim != 2:
         raise ValueError("chan_vese expects a 2D grayscale image.")
 
     image = normalize_image(image)
 
     if init_phi is None:
-        phi = initialize_phi(image.shape, method=init_level_set)
+        phi = initialize_phi(image.shape, method=init_level_set, image=image)
     else:
         if init_phi.shape != image.shape:
             raise ValueError("init_phi must have the same shape as image.")
@@ -269,27 +529,14 @@ def chan_vese(
     for iteration in range(1, params.max_iter + 1):
         c1, c2 = compute_region_averages(image, phi, params.epsilon)
 
-        delta = regularized_delta(phi, params.epsilon)
-        kappa = curvature(phi)
-
-        # Gradient descent for the Euler-Lagrange equation.
-        force = (
-            params.mu * kappa
-            - params.nu
-            - params.lambda1 * (image - c1) ** 2
-            + params.lambda2 * (image - c2) ** 2
-        )
-
-        phi = phi + params.timestep * delta * force
-
-        # Neumann-like boundary condition by copying neighboring values.
-        phi[0, :] = phi[1, :]
-        phi[-1, :] = phi[-2, :]
-        phi[:, 0] = phi[:, 1]
-        phi[:, -1] = phi[:, -2]
+        if params.solver == "semi-implicit":
+            phi = semi_implicit_update(image, phi, params, c1, c2)
+        else:
+            phi = explicit_update(image, phi, params, c1, c2)
 
         if params.reinit_every > 0 and iteration % params.reinit_every == 0:
             phi = reinitialize_sdf(phi, iterations=params.reinit_iters)
+            apply_neumann_boundary(phi)
 
         energy = compute_energy(image, phi, params, c1, c2)
         energies.append(energy)
@@ -309,4 +556,90 @@ def chan_vese(
         c2=c2,
         energies=energies,
         iterations=iteration,
+    )
+
+
+def multiphase_chan_vese(
+    image: np.ndarray,
+    params: Optional[ChanVeseParams] = None,
+    init_level_set: str = "checkerboard",
+    init_phis: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+) -> ChanVeseResult:
+    """
+    Run a two-level-set, four-region multiphase Chan-Vese segmentation.
+
+    This is useful when the image is not well described by only one inside
+    average and one outside average. Two level-set functions split the image
+    into four regions:
+        H(phi1)H(phi2), H(phi1)(1-H(phi2)),
+        (1-H(phi1))H(phi2), and (1-H(phi1))(1-H(phi2)).
+    """
+    if params is None:
+        params = ChanVeseParams()
+
+    if image.ndim != 2:
+        raise ValueError("multiphase_chan_vese expects a 2D grayscale image.")
+
+    image = normalize_image(image)
+
+    if init_phis is None:
+        phi1, phi2 = initialize_multiphase_phi(image, method=init_level_set)
+    else:
+        phi1, phi2 = init_phis
+        if phi1.shape != image.shape or phi2.shape != image.shape:
+            raise ValueError("init_phis must have the same shape as image.")
+        phi1 = phi1.astype(np.float64)
+        phi2 = phi2.astype(np.float64)
+
+    energies: List[float] = []
+    previous_phi1 = phi1.copy()
+    previous_phi2 = phi2.copy()
+    c_values = [0.0, 0.0, 0.0, 0.0]
+
+    for iteration in range(1, params.max_iter + 1):
+        c_values = compute_multiphase_averages(
+            image,
+            phi1,
+            phi2,
+            params.epsilon,
+        )
+
+        phi1, phi2 = multiphase_explicit_update(
+            image,
+            phi1,
+            phi2,
+            params,
+            c_values,
+        )
+
+        if params.reinit_every > 0 and iteration % params.reinit_every == 0:
+            phi1 = reinitialize_sdf(phi1, iterations=params.reinit_iters)
+            phi2 = reinitialize_sdf(phi2, iterations=params.reinit_iters)
+            apply_neumann_boundary(phi1)
+            apply_neumann_boundary(phi2)
+
+        energy = compute_multiphase_energy(image, phi1, phi2, params, c_values)
+        energies.append(energy)
+
+        change = 0.5 * (
+            np.mean(np.abs(phi1 - previous_phi1))
+            + np.mean(np.abs(phi2 - previous_phi2))
+        )
+        if change < params.tol:
+            break
+
+        previous_phi1 = phi1.copy()
+        previous_phi2 = phi2.copy()
+
+    labels = multiphase_labels(phi1, phi2)
+
+    return ChanVeseResult(
+        phi=phi1,
+        mask=labels,
+        c1=c_values[0],
+        c2=c_values[1],
+        energies=energies,
+        iterations=iteration,
+        phis=(phi1, phi2),
+        c_values=c_values,
     )
