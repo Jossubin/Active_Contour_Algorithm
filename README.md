@@ -290,6 +290,15 @@ Energy value over iterations. This is useful for checking whether the optimizati
 
 ### Example Result
 
+<p align="center">
+  <img src="docs/input.png" width="300">
+  <img src="docs/overlay.png" width="300">
+</p>
+
+<p align="center">
+  <img src="docs/mask.png" width="300">
+  <img src="docs/energy.png" width="300">
+</p>
 #### Input Image
 
 ![input](docs/input.png)
