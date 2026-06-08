@@ -378,7 +378,7 @@ Submit the GitHub repository link to the LMS assignment board.
 I submit the GitHub repository link for the final code assignment.
 
 Repository:
-https://github.com/YOUR_USERNAME/final_code_active_contours
+https://github.com/Jossubin/Active_Contour_Algorithm.git
 
 The repository includes:
 - Complete Python source code
