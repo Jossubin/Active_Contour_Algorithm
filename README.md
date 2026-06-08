@@ -222,14 +222,14 @@ python main.py --input images/test.png --output input_multiphase --model multi-p
         <img src="docs/test.png" width="350">
     </td>
     <td align="center">
-        <b>Segmentation Mask</b><br><br>
+        <b>overlay</b><br><br>
         <img src="docs/overlay.png" width="350">
     </td>
 </tr>
 
 <tr>
     <td align="center">
-        <b>Contour Overlay</b><br><br>
+        <b>label_mask_color</b><br><br>
         <img src="docs/label_mask_color.png" width="350">
     </td>
     <td align="center">
