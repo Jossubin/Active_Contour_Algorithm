@@ -288,6 +288,26 @@ Energy value over iterations. This is useful for checking whether the optimizati
 
 ---
 
+## Example Result
+
+### Input Image
+
+![input](docs/input.png)
+
+### Final Contour
+
+![overlay](docs/overlay.png)
+
+### Segmentation Mask
+
+![mask](docs/mask.png)
+
+### Energy Convergence
+
+![energy](docs/energy.png)
+
+---
+
 ## 8. Notes on the Implementation
 
 This implementation is designed to be clear and reproducible for coursework.
