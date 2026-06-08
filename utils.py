@@ -40,6 +40,44 @@ def save_mask(mask: np.ndarray, path: str | Path) -> None:
     cv2.imwrite(str(path), out)
 
 
+def save_label_mask(labels: np.ndarray, path: str | Path) -> None:
+    """
+    Save integer labels as a grayscale mask.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    labels = labels.astype(np.float64)
+    max_label = float(labels.max())
+    if max_label <= 0.0:
+        out = np.zeros_like(labels, dtype=np.uint8)
+    else:
+        out = (labels / max_label * 255.0).astype(np.uint8)
+    cv2.imwrite(str(path), out)
+
+
+def save_color_label_mask(labels: np.ndarray, path: str | Path) -> None:
+    """
+    Save labels 0, 1, 2, and 3 as a compact color visualization.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    palette_rgb = np.array(
+        [
+            [38, 38, 38],
+            [50, 135, 220],
+            [236, 180, 40],
+            [220, 70, 70],
+        ],
+        dtype=np.uint8,
+    )
+    labels = np.clip(labels.astype(np.int64), 0, len(palette_rgb) - 1)
+    color_rgb = palette_rgb[labels]
+    color_bgr = cv2.cvtColor(color_rgb, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(str(path), color_bgr)
+
+
 def save_phi(phi: np.ndarray, path: str | Path) -> None:
     """
     Save normalized phi as an image for inspection.
@@ -73,6 +111,33 @@ def save_overlay(
     plt.figure(figsize=(7, 7))
     plt.imshow(image, cmap="gray")
     plt.contour(phi, levels=[0], linewidths=2)
+    plt.axis("off")
+
+    if title:
+        plt.title(title)
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+
+def save_multiphase_overlay(
+    image: np.ndarray,
+    phi1: np.ndarray,
+    phi2: np.ndarray,
+    path: str | Path,
+    title: Optional[str] = None,
+) -> None:
+    """
+    Save original image with both multiphase zero-level contours overlaid.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    plt.figure(figsize=(7, 7))
+    plt.imshow(image, cmap="gray")
+    plt.contour(phi1, levels=[0], linewidths=2, colors=["tab:purple"])
+    plt.contour(phi2, levels=[0], linewidths=2, colors=["tab:orange"])
     plt.axis("off")
 
     if title:
