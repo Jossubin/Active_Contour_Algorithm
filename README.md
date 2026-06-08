@@ -209,10 +209,14 @@ energy.png             Energy curve over iterations
 ---
 
 ## Example Results
+Visualize the result image at the execution of the command below:
 
+```bash
+python main.py --input images/test.png --output input_multiphase --model multi-phase --init intensity --max-iter 1000
+```
 <table>
 <tr>
-    <th width="180">Result Type</th>
+    <th width="140">Result Type</th>
     <th>Visualization</th>
 </tr>
 
@@ -222,7 +226,7 @@ energy.png             Energy curve over iterations
         Original image
     </td>
     <td align="center">
-        <img src="docs/test.png" width="700">
+        <img src="docs/test.png" width="450">
     </td>
 </tr>
 
@@ -232,7 +236,7 @@ energy.png             Energy curve over iterations
         Binary segmentation
     </td>
     <td align="center">
-        <img src="docs/overlay.png" width="700">
+        <img src="docs/overlay.png" width="450">
     </td>
 </tr>
 
@@ -242,7 +246,7 @@ energy.png             Energy curve over iterations
         Final contour
     </td>
     <td align="center">
-        <img src="docs/label_mask_color.png" width="700">
+        <img src="docs/label_mask_color.png" width="450">
     </td>
 </tr>
 
@@ -252,7 +256,7 @@ energy.png             Energy curve over iterations
         Convergence curve
     </td>
     <td align="center">
-        <img src="docs/energy.png" width="700">
+        <img src="docs/energy.png" width="450">
     </td>
 </tr>
 
