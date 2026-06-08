@@ -208,6 +208,58 @@ energy.png             Energy curve over iterations
 
 ---
 
+## Example Results
+
+<table>
+<tr>
+    <th width="180">Result Type</th>
+    <th>Visualization</th>
+</tr>
+
+<tr>
+    <td align="center">
+        <b>Input</b><br>
+        Original image
+    </td>
+    <td align="center">
+        <img src="docs/input.png" width="700">
+    </td>
+</tr>
+
+<tr>
+    <td align="center">
+        <b>Mask</b><br>
+        Binary segmentation
+    </td>
+    <td align="center">
+        <img src="docs/mask.png" width="700">
+    </td>
+</tr>
+
+<tr>
+    <td align="center">
+        <b>Overlay</b><br>
+        Final contour
+    </td>
+    <td align="center">
+        <img src="docs/overlay.png" width="700">
+    </td>
+</tr>
+
+<tr>
+    <td align="center">
+        <b>Energy</b><br>
+        Convergence curve
+    </td>
+    <td align="center">
+        <img src="docs/energy.png" width="700">
+    </td>
+</tr>
+
+</table>
+
+---
+
 ## Implementation Notes
 
 The two-phase model follows the Chan-Vese level-set formulation with regularized Heaviside and Dirac delta functions. The default update is a semi-implicit finite-difference scheme for the curvature term.
