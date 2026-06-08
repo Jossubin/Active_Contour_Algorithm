@@ -56,12 +56,18 @@ F = mu * Length(C)
     + lambda2 * integral_outside |u0 - c2|^2
 ```
 
-The implementation uses:
+### Implemented Components
 
-- regularized Heaviside function
-- regularized Dirac delta function
-- curvature term
-- finite-difference based level-set evolution
+The following components from the original Chan–Vese model are implemented:
+
+- Level-set representation of evolving contours
+- Regularized Heaviside function
+- Regularized Dirac delta function
+- Region average estimation (c1, c2)
+- Curvature-based contour regularization
+- Energy minimization using gradient descent
+- Finite difference numerical approximation
+- Binary image segmentation based on region statistics
 
 ---
 
