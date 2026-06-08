@@ -222,7 +222,7 @@ energy.png             Energy curve over iterations
         Original image
     </td>
     <td align="center">
-        <img src="docs/input.png" width="700">
+        <img src="docs/test.png" width="700">
     </td>
 </tr>
 
@@ -232,7 +232,7 @@ energy.png             Energy curve over iterations
         Binary segmentation
     </td>
     <td align="center">
-        <img src="docs/mask.png" width="700">
+        <img src="docs/overlay.png" width="700">
     </td>
 </tr>
 
@@ -242,7 +242,7 @@ energy.png             Energy curve over iterations
         Final contour
     </td>
     <td align="center">
-        <img src="docs/overlay.png" width="700">
+        <img src="docs/label_mask_color.png" width="700">
     </td>
 </tr>
 
