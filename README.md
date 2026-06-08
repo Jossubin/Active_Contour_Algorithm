@@ -288,21 +288,21 @@ Energy value over iterations. This is useful for checking whether the optimizati
 
 ---
 
-## Example Result
+### Example Result
 
-### Input Image
+#### Input Image
 
 ![input](docs/input.png)
 
-### Final Contour
+#### Final Contour
 
 ![overlay](docs/overlay.png)
 
-### Segmentation Mask
+#### Segmentation Mask
 
 ![mask](docs/mask.png)
 
-### Energy Convergence
+#### Energy Convergence
 
 ![energy](docs/energy.png)
 
