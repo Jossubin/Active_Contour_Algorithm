@@ -290,57 +290,6 @@ Energy value over iterations. This is useful for checking whether the optimizati
 
 ### Example Result
 
-<table>
-<tr>
-    <th width="150">Output Type</th>
-    <th width="700">Visualization</th>
-</tr>
-
-<tr>
-    <td align="center">Input Image</td>
-    <td align="center">
-        <img src="docs/input.png" width="700">
-    </td>
-</tr>
-
-<tr>
-    <td align="center">Segmentation Mask</td>
-    <td align="center">
-        <img src="docs/mask.png" width="700">
-    </td>
-</tr>
-
-<tr>
-    <td align="center">Final Contour Overlay</td>
-    <td align="center">
-        <img src="docs/overlay.png" width="700">
-    </td>
-</tr>
-
-<tr>
-    <td align="center">Energy Convergence</td>
-    <td align="center">
-        <img src="docs/energy.png" width="700">
-    </td>
-</tr>
-
-</table>
-
-#### Input Image
-
-![input](docs/input.png)
-
-#### Final Contour
-
-![overlay](docs/overlay.png)
-
-#### Segmentation Mask
-
-![mask](docs/mask.png)
-
-#### Energy Convergence
-
-![energy](docs/energy.png)
 
 ---
 
