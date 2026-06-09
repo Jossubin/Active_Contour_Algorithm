@@ -50,7 +50,7 @@ pip install -r requirements.txt
 
 Required packages:
 
-```bash
+```text
 numpy
 opencv-python
 matplotlib
