@@ -246,9 +246,3 @@ python main.py --input images/test.png --output input_multiphase --model multi-p
 </table>
 
 ---
-
-## Implementation Notes
-
-The two-phase model follows the Chan-Vese level-set formulation with regularized Heaviside and Dirac delta functions. The default update is a semi-implicit finite-difference scheme for the curvature term.
-
-The multi-phase model extends the segmentation to four regions using two level-set functions. This is useful when one inside average and one outside average are not enough to describe the image.
