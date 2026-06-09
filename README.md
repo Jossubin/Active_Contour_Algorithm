@@ -49,11 +49,12 @@ pip install -r requirements.txt
 ```
 
 Required packages:
-'''text
+
+```bash
 numpy
 opencv-python
 matplotlib
-'''
+```
 
 ---
 
