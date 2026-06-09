@@ -44,8 +44,16 @@ python -m venv .venv
 Install dependencies:
 
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+Required packages:
+'''text
+numpy
+opencv-python
+matplotlib
+'''
 
 ---
 
